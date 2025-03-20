@@ -9,7 +9,7 @@ from llama_index.core.postprocessor import SimilarityPostprocessor
 import os
 
 
-llm = Ollama(model='llama3.2:1b', request_timeout=120.0, temperature=0.8)
+llm = Ollama(model='llama3.2:1b', request_timeout=120.0)
 # ollama_embedding = OllamaEmbedding(
 #     model_name="llama3.2:1b",
 #     base_url="http://localhost:11434",
@@ -22,7 +22,7 @@ Settings.embed_model = FastEmbedEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
 path = os.path.join('docs')
 
-text_splitter = SentenceSplitter(chunk_size=200, chunk_overlap=20)
+text_splitter = SentenceSplitter(chunk_size=90, chunk_overlap=40)
 Settings.text_splitter = text_splitter
 
 documents = SimpleDirectoryReader(path).load_data()
@@ -30,7 +30,7 @@ vector_index = VectorStoreIndex.from_documents(documents=documents, show_progres
 
 retriever = VectorIndexRetriever(
   index=vector_index,
-  similarity_top_k=5
+  similarity_top_k=10
 )
 
 syntetizer = get_response_synthesizer()
@@ -38,21 +38,26 @@ syntetizer = get_response_synthesizer()
 query_engine = RetrieverQueryEngine(
   retriever=retriever,
   response_synthesizer=syntetizer,
-  node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.2)],
+  node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.5)],
 )
 
+def create_prompt(query):
+  prompt = f'''
+    Você é um assistente do veículo prisma. \n
+    Você só deve responder referente ao ao manual que está no contexto, nunca deve buscar uma resposta fora dele. Sempre que não encontrar a resposta
+    responda: 'Infelizmente não tenho essa informação. Posso te ajudar de outra forma?'. \n
+    Seja sempre o mais cordial possível e com bom humor. 
+    \n
+    \n
+    Com base nisso responda: {query}
+  '''
+  return prompt
 
-query = 'Sobre o que se trata esse edital?'
+while True:
+  query = input('Em que posso ajudar? ')
 
-prompt = f'''
-  Você é um especialista de avaliação de editais. \n
-  Você só deve responder referente ao documento, nunca deve buscar uma resposta fora dele. Sempre que não encontrar a resposta
-   responda: 'Infelizmente não tenho essa informação. Posso te ajudar de outra forma?'. \n
-   Seja sempre o mais cordial possível e com bom humor. 
-   \n
-   \n
-   Com base nisso responda: {query}
-'''
-response = query_engine.query(prompt)
-
-print(response)
+  if query == 'fim':
+    break
+  else:
+    response = query_engine.query(create_prompt(query=query))
+    print(response)
