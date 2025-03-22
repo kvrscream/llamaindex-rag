@@ -2,3 +2,5 @@ llama_index
 llama-index-llms-ollama
 llama-index-embeddings-ollama
 llama-index-embeddings-fastembed
+flask-jwt-extended
+flask
